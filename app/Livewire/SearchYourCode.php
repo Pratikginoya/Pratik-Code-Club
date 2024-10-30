@@ -9,59 +9,42 @@ use App\Models\CodeDetails;
 class SearchYourCode extends Component
 {
     use WithPagination;
-    public $CodeDetails = [];
+    // public $CodeDetails = [];
     public $search_code = "";
     public $clickedCodeDetails;
     public $isOpen = false;
-
-    public function mount()
-    {
-        $this->CodeDetails = CodeDetails::with('technology')->where('user_id',auth()->id())->active()->get();
-    }
+    public $isSearch = false;
 
     public function render()
     {
-        return view('livewire.search-your-code')->layout('layouts.app');
+        $query = CodeDetails::with('technology')
+            ->where('user_id', auth()->id());
+
+        if ($this->isSearch) {
+            $query->where(function($query) {
+                $query->where('code_name', 'like', "%{$this->search_code}%")
+                    ->orWhere('code_desc', 'like', "%{$this->search_code}%")
+                    ->orWhere('code_detail', 'like', "%{$this->search_code}%")
+                    ->orWhere('code_keyword', 'like', "%{$this->search_code}%");
+            });
+        }
+
+        // Fetch paginated results here
+        $CodeDetails = $query->active()->paginate(10);
+
+        return view('livewire.search-your-code', [
+            'CodeDetails' => $CodeDetails
+        ])->layout('layouts.app');
     }
 
     public function searchCodeField()
     {
-        $this->CodeDetails = CodeDetails::with('technology')
-            ->where(function($query) {
-                $query->where('code_name','like',"%{$this->search_code}%")
-                    ->orWhere('code_desc','like',"%{$this->search_code}%")
-                    ->orWhere('code_detail','like',"%{$this->search_code}%")
-                    ->orWhere('code_keyword','like',"%{$this->search_code}%");
-            })
-            ->where('user_id',auth()->id())
-            ->active()
-            ->get();
+        $this->isSearch = true;
     }
-
-    // public function appendDataOnModel($id)
-    // {
-    //     $this->clickedCodeDetails = CodeDetails::find($id);
-
-    //     return view('livewire.view-detail-code')->layout('layouts.app');
-    //     // open model
-    //     // $this->isOpen = true;
-    // }
 
     public function detailCode($id)
     {
         $id = encrypt($id);
         return $this->redirect('/code/detail/'.$id, navigate:true);
     }
-
-    // close model
-    public function closeModal()
-    {
-        $this->isOpen = false;
-    }
-
-    // public function viewMoreCodeDetails($id)
-    // {
-    //     $id = encrypt($id);
-    //     return redirect('/code/'.$id, navigate:true);
-    // }
 }
